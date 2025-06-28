@@ -18,15 +18,25 @@ def setup_logging(
         log_file: Optional file to write logs to
         verbose: Enable verbose console output
     """
-    # Configure root logger
+    # Configure root logger for the entire application
     root_logger = logging.getLogger("zendesk_cli")
     root_logger.setLevel(getattr(logging, level.upper()))
+    
+    # Also set the root logger level to prevent any other loggers from bypassing our settings
+    logging.getLogger().setLevel(getattr(logging, level.upper()))
     
     # Clear any existing handlers
     root_logger.handlers.clear()
     
-    # Console handler
+    # Console handler - only show WARNING and above unless in verbose mode
     console_handler = logging.StreamHandler(sys.stdout)
+    if not verbose:
+        # In normal mode, only show WARNING, ERROR, and CRITICAL to console
+        console_handler.setLevel(logging.WARNING)
+    else:
+        # In verbose mode, show everything based on the main level
+        console_handler.setLevel(getattr(logging, level.upper()))
+    
     console_formatter = logging.Formatter(
         "%(levelname)s: %(message)s" if not verbose 
         else "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

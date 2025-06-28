@@ -69,5 +69,82 @@ class APIError(ZendeskCliError):
 
 
 class ConfigurationError(ZendeskCliError):
-    """Configuration-related errors."""
-    pass
+    """Configuration-related errors with helpful suggestions."""
+    
+    def __init__(self, message: str, **kwargs) -> None:
+        suggestions = [
+            "Run 'zendesk configure' to set up credentials",
+            "Check if configuration file exists and is readable",
+            "Verify file permissions on configuration directory"
+        ]
+        super().__init__(message, suggestions=suggestions, **kwargs)
+
+
+class ValidationError(ZendeskCliError):
+    """Data validation errors."""
+    
+    def __init__(self, message: str, field: Optional[str] = None, **kwargs) -> None:
+        details = {"field": field} if field else {}
+        suggestions = [
+            "Check input format and try again",
+            "Refer to documentation for valid values"
+        ]
+        super().__init__(message, details=details, suggestions=suggestions, **kwargs)
+
+
+class NetworkError(ZendeskCliError):
+    """Network connectivity errors with retry suggestions."""
+    
+    def __init__(self, message: str, retry_after: Optional[int] = None, **kwargs) -> None:
+        details = {"retry_after": retry_after} if retry_after else {}
+        suggestions = [
+            "Check your internet connection",
+            "Verify Zendesk domain is accessible",
+            "Try again in a few moments"
+        ]
+        if retry_after:
+            suggestions.append(f"Wait {retry_after} seconds before retrying")
+        super().__init__(message, details=details, suggestions=suggestions, **kwargs)
+
+
+class KeyringError(ZendeskCliError):
+    """Keyring/credential storage errors."""
+    
+    def __init__(self, message: str, **kwargs) -> None:
+        suggestions = [
+            "Check if keyring service is available on your system",
+            "Try reconfiguring with 'zendesk configure'",
+            "On Linux, install python3-keyring or python3-secretstorage"
+        ]
+        super().__init__(message, suggestions=suggestions, **kwargs)
+
+
+class RateLimitError(APIError):
+    """Rate limiting specific error with retry logic."""
+    
+    def __init__(self, message: str, retry_after: Optional[int] = None, **kwargs) -> None:
+        suggestions = [
+            f"Wait {retry_after or 60} seconds before retrying",
+            "Reduce API request frequency",
+            "Contact Zendesk support if issue persists"
+        ]
+        super().__init__(
+            message, 
+            status_code=429, 
+            suggestions=suggestions,
+            **kwargs
+        )
+        self.retry_after = retry_after
+
+
+class TimeoutError(NetworkError):
+    """Request timeout specific error."""
+    
+    def __init__(self, message: str, timeout_duration: Optional[float] = None, **kwargs) -> None:
+        details = {"timeout_duration": timeout_duration} if timeout_duration else {}
+        suggestions = [
+            "Check your internet connection speed",
+            "Try again with a more stable connection",
+            "Contact Zendesk support if their service is slow"
+        ]
+        super().__init__(message, details=details, suggestions=suggestions, **kwargs)

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, validator
 
 import keyring
 
-from ..models.exceptions import ConfigurationError
+from ..models.exceptions import ConfigurationError, KeyringError, ValidationError
 
 
 class ZendeskConfig(BaseModel):
@@ -35,10 +35,21 @@ class ZendeskConfig(BaseModel):
     
     @validator('email')
     def validate_email(cls, v: str) -> str:
-        """Ensure email is not empty."""
+        """Ensure email is not empty and has basic format validation."""
         v = v.strip()
         if not v:
             raise ValueError("Email cannot be empty")
+        if '@' not in v or '.' not in v:
+            raise ValueError("Email must be a valid email address")
+        return v
+    
+    @validator('api_token')
+    def validate_api_token(cls, v: Optional[str]) -> Optional[str]:
+        """Validate API token format if provided."""
+        if v is not None:
+            v = v.strip()
+            if v and len(v) < 10:  # Basic length check
+                raise ValueError("API token appears to be too short")
         return v
         
     @classmethod
@@ -71,10 +82,16 @@ class ZendeskConfig(BaseModel):
             
         # Load API token from keyring if not in file
         if 'api_token' not in data:
-            data['api_token'] = keyring.get_password(
-                "zendesk-cli", 
-                data.get('email', '')
-            )
+            try:
+                api_token = keyring.get_password(
+                    "zendesk-cli", 
+                    data.get('email', '')
+                )
+                data['api_token'] = api_token
+            except Exception as e:
+                raise KeyringError(
+                    f"Failed to retrieve API token from secure storage: {e}"
+                ) from e
             
         return cls(**data)
         
@@ -94,7 +111,12 @@ class ZendeskConfig(BaseModel):
         
         # Save API token to keyring
         if self.api_token:
-            keyring.set_password("zendesk-cli", self.email, self.api_token)
+            try:
+                keyring.set_password("zendesk-cli", self.email, self.api_token)
+            except Exception as e:
+                raise KeyringError(
+                    f"Failed to save API token to secure storage: {e}"
+                ) from e
             
         # Save non-sensitive config to file
         config_data = {
@@ -102,8 +124,13 @@ class ZendeskConfig(BaseModel):
             "email": self.email,
         }
         
-        with open(config_path, 'w') as f:
-            json.dump(config_data, f, indent=2)
+        try:
+            with open(config_path, 'w') as f:
+                json.dump(config_data, f, indent=2)
+        except (IOError, PermissionError) as e:
+            raise ConfigurationError(
+                f"Failed to write configuration file to {config_path}: {e}"
+            ) from e
             
     @staticmethod
     def get_default_config_path() -> Path:

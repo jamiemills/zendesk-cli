@@ -28,7 +28,7 @@ class AuthService:
         Returns:
             ZendeskConfig instance
         """
-        logger.info(f"Loading configuration from {config_path or 'default location'}")
+        logger.debug(f"Loading configuration from {config_path or 'default location'}")
         return ZendeskConfig.from_file(config_path)
     
     def save_config(self, config: ZendeskConfig, config_path: Optional[Union[str, Path]] = None) -> None:
@@ -38,7 +38,7 @@ class AuthService:
             config: Configuration to save
             config_path: Path to save config. If None, uses default.
         """
-        logger.info(f"Saving configuration to {config_path or 'default location'}")
+        logger.debug(f"Saving configuration to {config_path or 'default location'}")
         config.save_to_file(config_path)
     
     def create_client_from_config(self, config: ZendeskConfig) -> ZendeskClient:

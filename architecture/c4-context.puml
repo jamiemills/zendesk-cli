@@ -1,0 +1,17 @@
+@startuml C4-Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title System Context - Zendesk CLI Tool
+
+Person(user, "Support Agent/Manager", "Uses CLI to view and manage Zendesk tickets")
+System(zendesk_cli, "Zendesk CLI", "Command-line tool for ticket management with filtering, sorting, and export capabilities")
+System_Ext(zendesk_api, "Zendesk API", "REST API providing ticket, user, and group data")
+System_Ext(system_keyring, "System Keyring", "Secure credential storage (macOS Keychain, Windows Credential Store, Linux Secret Service)")
+System_Ext(file_system, "File System", "Configuration files and CSV export storage")
+
+Rel(user, zendesk_cli, "Executes commands", "CLI")
+Rel(zendesk_cli, zendesk_api, "Fetches tickets, users, groups", "HTTPS/JSON")
+Rel(zendesk_cli, system_keyring, "Stores/retrieves API tokens", "Native API")
+Rel(zendesk_cli, file_system, "Reads config, writes CSV exports", "File I/O")
+
+@enduml

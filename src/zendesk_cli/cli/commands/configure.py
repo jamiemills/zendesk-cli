@@ -6,7 +6,13 @@ from typing import Optional
 
 from ...services.auth_service import AuthService
 from ...utils.config import ZendeskConfig
-from ...models.exceptions import ZendeskCliError
+from ...models.exceptions import (
+    ZendeskCliError, 
+    NetworkError, 
+    RateLimitError,
+    TimeoutError,
+    KeyringError
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +109,18 @@ def configure(
                 click.echo(f"   Logged in as: {user_info.get('name')} ({user_info.get('email')})")
                 click.echo(f"   User ID: {user_info.get('id')}")
                 
+            except NetworkError as e:
+                click.echo(
+                    click.style(
+                        f"🌐 Connection test failed - Network error: {e}",
+                        fg='red'
+                    )
+                )
+                if hasattr(e, 'suggestions') and e.suggestions:
+                    click.echo("\n💡 Suggestions:")
+                    for suggestion in e.suggestions:
+                        click.echo(f"   • {suggestion}")
+                raise click.Abort()
             except Exception as e:
                 click.echo(
                     click.style(
@@ -120,6 +138,13 @@ def configure(
             )
         )
         
+    except KeyringError as e:
+        click.echo(click.style(f"🔐 Credential storage error: {e}", fg='red'))
+        if hasattr(e, 'suggestions') and e.suggestions:
+            click.echo("\n💡 Suggestions:")
+            for suggestion in e.suggestions:
+                click.echo(f"   • {suggestion}")
+        raise click.Abort()
     except ZendeskCliError as e:
         click.echo(click.style(f"❌ Configuration error: {e}", fg='red'))
         if hasattr(e, 'suggestions') and e.suggestions:
@@ -130,4 +155,5 @@ def configure(
     except Exception as e:
         logger.exception("Unexpected error in configure command")
         click.echo(click.style(f"❌ Unexpected error: {e}", fg='red'))
+        click.echo("💡 Please report this issue if it persists.")
         raise click.Abort()

@@ -1,224 +1,307 @@
 # Zendesk CLI
 
-A command-line utility to list open Zendesk tickets assigned to you or your groups, displaying them in a beautiful tabular format.
+A powerful command-line utility for managing Zendesk tickets directly from your terminal. View, filter, sort, and export tickets with beautiful table formatting and comprehensive filtering options.
 
-## Features
+## Core Concepts
 
-- 🎫 List open Zendesk tickets
-- 👤 Filter tickets assigned to you
-- 👥 Filter tickets by group
-- 🔒 Secure credential storage using keyring
-- 🎨 Beautiful table output with Rich
-- ⚙️ Easy configuration management
+**Zendesk CLI** connects to your Zendesk instance via API to provide a fast, terminal-based interface for ticket management. It uses secure credential storage and provides rich filtering, sorting, and export capabilities.
+
+**Key Benefits:**
+- 🚀 **Fast ticket overview** - See all your tickets at a glance
+- 🎯 **Smart filtering** - Filter by assignee, groups, status, or combinations
+- 📊 **Flexible sorting** - Sort by any column for better organization  
+- 💾 **CSV export** - Export filtered results with full descriptions
+- 🔒 **Secure** - API tokens stored safely in system keyring
+- 🎨 **Beautiful output** - Rich terminal tables with color coding
 
 ## Installation
 
+### From GitHub
+
 ```bash
-# Install the package in development mode
+# Clone the repository
+git clone https://github.com/jamiemills/zendesk-cli.git
+cd zendesk-cli
+
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install the package
+pip install -e .
+
+# Or install with development dependencies
 pip install -e ".[dev]"
+```
+
+### Direct Installation
+
+```bash
+# Install directly from GitHub
+pip install git+https://github.com/jamiemills/zendesk-cli.git
 ```
 
 ## Quick Start
 
-### 1. Configure your Zendesk credentials
+### 1. Configure Zendesk credentials
 
 ```bash
 zendesk configure
 ```
 
 You'll be prompted for:
-
 - **Zendesk domain** (e.g., `company.zendesk.com`)
-- **Email address** (your Zendesk account email)
-- **API token** (generate from Zendesk Admin → APIs)
+- **Email address** (your Zendesk account email)  
+- **API token** ([generate from Zendesk](https://developer.zendesk.com/api-reference/introduction/security-and-auth/#api-token))
 
-### 2. List your tickets
+### 2. List tickets
 
 ```bash
 # List all open tickets
 zendesk tickets
 
-# List only tickets assigned to you
+# List only your assigned tickets
 zendesk tickets --assignee-only
 
-# List tickets for a specific group
-zendesk tickets --group 12345
-
-# List tickets for multiple groups
-zendesk tickets --group 12345,6789,1111
+# List tickets by team/group
+zendesk tickets --group "Support Team"
 ```
 
-## Example Outputs
+## Complete Feature List
 
-### Configuration Setup
+### ✅ Core Features
+- **Multi-status filtering** - Filter by single or multiple statuses (`--status "open,pending"`)
+- **Team/group filtering** - Filter by team names or IDs (`--group "Support Team,Engineering"`)
+- **Assignee filtering** - Show only tickets assigned to you (`--assignee-only`)
+- **Column sorting** - Sort by any column (`--sort-by days-updated`)
+- **CSV export** - Export results with full descriptions (`--csv tickets.csv`)
+- **Team name resolution** - Shows actual team names instead of group IDs
+- **Secure credential storage** - API tokens stored in system keyring
+- **Rich terminal output** - Beautiful colored tables with proper formatting
+
+### ✅ Filtering Options
+- **By Status**: `new`, `open`, `pending`, `hold`, `solved`, `closed`
+- **By Assignment**: Personal tickets, team tickets, or all tickets
+- **By Groups**: Single team, multiple teams, or group IDs
+- **Multiple Status**: Combine statuses like `"hold,closed"` for OR logic
+
+### ✅ Sorting Options
+- **ticket** - Sort by ticket number
+- **status** - Sort by ticket status
+- **team** - Sort by team/group name  
+- **description** - Sort by description text
+- **opened** - Sort by creation date (newest first)
+- **days-opened** - Sort by age since creation
+- **updated** - Sort by last update date (newest first)
+- **days-updated** - Sort by staleness since last update
+
+### ✅ Export Features
+- **CSV export** with full ticket descriptions (not truncated)
+- **Proper escaping** of commas and special characters
+- **All columns included** matching table display format
+- **UTF-8 encoding** for international character support
+
+## Command Reference
+
+### `zendesk tickets` - List tickets
+
+**Basic Usage:**
+```bash
+zendesk tickets [OPTIONS]
+```
+
+**All Options:**
+```bash
+--assignee-only              # Show only tickets assigned to you
+--group TEXT                 # Filter by group ID(s) or name(s) (comma-separated)
+--status TEXT                # Filter by status(es) (comma-separated, default: open)
+--sort-by [ticket|status|team|description|opened|days-opened|updated|days-updated]
+--csv PATH                   # Export results to CSV file
+--config-path PATH           # Use custom configuration file
+```
+
+**Status Values:**
+- `new` - Newly created tickets
+- `open` - Open and active tickets  
+- `pending` - Waiting for customer response
+- `hold` - On hold/paused tickets
+- `solved` - Resolved tickets
+- `closed` - Closed and archived tickets
+
+### `zendesk configure` - Setup credentials
+
+**Basic Usage:**
+```bash
+zendesk configure [OPTIONS]
+```
+
+**Options:**
+```bash
+--domain TEXT                # Zendesk domain (e.g., company.zendesk.com)
+--email TEXT                 # Your email address
+--api-token TEXT             # Your API token
+--config-path PATH           # Custom configuration file path
+--test                       # Test connection after configuration
+```
+
+## Usage Examples
+
+### Basic Filtering
+
+```bash
+# All open tickets (default)
+zendesk tickets
+
+# Multiple statuses - tickets that are open OR pending
+zendesk tickets --status "open,pending"
+
+# Tickets on hold or closed
+zendesk tickets --status "hold,closed"
+
+# Only your assigned tickets
+zendesk tickets --assignee-only
+
+# Specific team's tickets
+zendesk tickets --group "Support Team"
+
+# Multiple teams
+zendesk tickets --group "Support Team,Engineering,Sales"
+```
+
+### Sorting & Organization
+
+```bash
+# Sort by oldest tickets first (most urgent)
+zendesk tickets --sort-by days-opened
+
+# Sort by most stale (needs attention)
+zendesk tickets --sort-by days-updated
+
+# Sort by team for grouping
+zendesk tickets --sort-by team
+
+# Sort by ticket number
+zendesk tickets --sort-by ticket
+```
+
+### CSV Export
+
+```bash
+# Export all open tickets
+zendesk tickets --csv tickets.csv
+
+# Export stale tickets sorted by age
+zendesk tickets --status "open,pending" --sort-by days-updated --csv stale.csv
+
+# Export team-specific tickets
+zendesk tickets --group "Support Team" --csv support_tickets.csv
+
+# Export multiple statuses for reporting
+zendesk tickets --status "hold,closed" --csv closed_tickets.csv
+```
+
+### Advanced Combinations
+
+```bash
+# Find stale pending tickets for specific teams
+zendesk tickets --status "pending" --group "Support Team,Level 2" --sort-by days-updated --csv stale_pending.csv
+
+# Export all your tickets across all statuses
+zendesk tickets --assignee-only --status "new,open,pending,hold" --sort-by opened --csv my_tickets.csv
+
+# Get overview of closed tickets by team
+zendesk tickets --status "solved,closed" --sort-by team --csv closed_by_team.csv
+```
+
+## Example Output
+
+### Table Display
+
+```bash
+$ zendesk tickets --status "open,pending" --sort-by days-updated
+📋 Fetching open,pending tickets...
+
+📊 Found 4 open,pending ticket(s):
+                                    🎫 Zendesk Tickets                                    
+┏━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Ticket # ┃ Status  ┃ Team Name       ┃ Description               ┃ Opened                    ┃
+┣━━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ #12345   ┃ Open    ┃ Support Team    ┃ Login system not work...  ┃ 2024-01-15                ┃
+┃ #12346   ┃ Pending ┃ Engineering     ┃ Database performance i... ┃ 2024-01-18                ┃
+┃ #12347   ┃ Open    ┃ Support Team    ┃ Email notifications no... ┃ 2024-01-20                ┃
+┃ #12348   ┃ Pending ┃ Level 2 Support ┃ Complex integration is... ┃ 2024-01-22                ┃
+┗━━━━━━━━━━┻━━━━━━━━━┻━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Days Since Opened   ┃ Updated                   ┃ Days Since Updated        ┃ Link                                  ┃
+┣━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 13                  ┃ 2024-01-20                ┃ 8                         ┃ https://company.zendesk.com/agent/... ┃
+┃ 10                  ┃ 2024-01-22                ┃ 6                         ┃ https://company.zendesk.com/agent/... ┃
+┃ 8                   ┃ 2024-01-24                ┃ 4                         ┃ https://company.zendesk.com/agent/... ┃
+┃ 6                   ┃ 2024-01-26                ┃ 2                         ┃ https://company.zendesk.com/agent/... ┃
+┗━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+📈 Summary:
+   Total: 4 tickets
+   Status: open: 2, pending: 2
+```
+
+### CSV Export
+
+```bash
+$ zendesk tickets --csv tickets.csv
+📋 Fetching open tickets...
+✅ Exported 4 tickets to tickets.csv
+
+📊 Found 4 open ticket(s):
+[table output continues...]
+```
+
+**CSV Content (tickets.csv):**
+```csv
+"Ticket #","Status","Team Name","Description","Opened","Days Since Opened","Updated","Days Since Updated","Link"
+"#12345","Open","Support Team","Login system not working for users - customers report authentication failures","2024-01-15","13","2024-01-20","8","https://company.zendesk.com/agent/tickets/12345"
+"#12346","Pending","Engineering","Database performance issues causing timeouts","2024-01-18","10","2024-01-22","6","https://company.zendesk.com/agent/tickets/12346"
+```
+
+### Configuration
 
 ```bash
 $ zendesk configure --test
 🔧 Zendesk CLI Configuration
 ========================================
-Zendesk domain (e.g., company.zendesk.com): acme.zendesk.com
-Your email address: john.doe@acme.com
-Your API token: 
-✅ Configuration saved to: /Users/john/.config/zendesk-cli/config.json
+Zendesk domain (e.g., company.zendesk.com): company.zendesk.com
+Your email address: user@company.com
+Your API token: [hidden]
+✅ Configuration saved successfully
 
 🔍 Testing connection...
 ✅ Connection successful!
-   Logged in as: John Doe (john.doe@acme.com)
+   Logged in as: John Doe (user@company.com)
    User ID: 12345
 
 🎉 Setup complete! You can now run 'zendesk tickets' to list your tickets.
 ```
 
-### Listing All Tickets
+### No Results
 
 ```bash
-$ zendesk tickets
-📋 Fetching all open tickets...
-
-📊 Found 3 open ticket(s):
-                              🎫 Zendesk Tickets                              
-┏━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
-┃ Ticket # ┃ Team       ┃ Description                          ┃ First Opened ┃
-┣━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━┫
-┃ #1234    ┃ Group 456  ┃ Login system not working for users   ┃ 2024-01-15   ┃
-┃ #1235    ┃ Group 789  ┃ Feature request: Add dark mode sup...┃ 2024-01-16   ┃
-┃ #1236    ┃ Unassigned ┃ Performance issues on dashboard      ┃ 2024-01-17   ┃
-┗━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━┛
-
-┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Days Open  ┃ Last Updated ┃ Days Since Update┃ Link                           ┃
-┣━━━━━━━━━━━━╋━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃ 13         ┃ 2024-01-20   ┃ 8                ┃ https://acme.zendesk.com/ti... ┃
-┃ 12         ┃ 2024-01-16   ┃ 12               ┃ https://acme.zendesk.com/ti... ┃
-┃ 11         ┃ 2024-01-17   ┃ 11               ┃ https://acme.zendesk.com/ti... ┃
-┗━━━━━━━━━━━━┻━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-📈 Summary:
-   Total: 3 tickets
-   Status: open: 3
-```
-
-### Filtering by Multiple Groups
-
-```bash
-$ zendesk tickets --group 456,789,123
-📋 Fetching tickets for groups 456, 789, 123...
-
-📊 Found 25 open ticket(s):
-                              🎫 Zendesk Tickets                              
-┏━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
-┃ Ticket # ┃ Team       ┃ Description                          ┃ First Opened ┃
-┣━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━┫
-┃ #5678    ┃ Group 456  ┃ Multi-team collaboration issue       ┃ 2024-01-18   ┃
-┃ #5679    ┃ Group 789  ┃ Cross-department feature request     ┃ 2024-01-17   ┃
-┃ #5680    ┃ Group 123  ┃ Shared resource allocation problem   ┃ 2024-01-16   ┃
-┗━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━┛
-
-📈 Summary:
-   Total: 25 tickets
-   Status: open: 20, pending: 5
-```
-
-### Filtering by Assignee
-
-```bash
-$ zendesk tickets --assignee-only
-📋 Fetching tickets assigned to you...
-
-📊 Found 1 open ticket(s):
-                              🎫 Zendesk Tickets                              
-┏━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
-┃ Ticket # ┃ Team       ┃ Description                          ┃ First Opened ┃
-┣━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━┫
-┃ #1234    ┃ Group 456  ┃ Login system not working for users   ┃ 2024-01-15   ┃
-┗━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━┛
-
-┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Days Open  ┃ Last Updated ┃ Days Since Update┃ Link                           ┃
-┣━━━━━━━━━━━━╋━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃ 13         ┃ 2024-01-20   ┃ 8                ┃ https://acme.zendesk.com/ti... ┃
-┗━━━━━━━━━━━━┻━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-📈 Summary:
-   Total: 1 tickets
-   Status: open: 1
-```
-
-### No Tickets Found
-
-```bash
-$ zendesk tickets --assignee-only
-📋 Fetching tickets assigned to you...
-✅ No open tickets found!
-```
-
-### Error Handling
-
-```bash
-$ zendesk tickets
-❌ No configuration found. Run 'zendesk configure' first.
-```
-
-```bash
-$ zendesk configure --test
-🔧 Zendesk CLI Configuration
-========================================
-Zendesk domain (e.g., company.zendesk.com): bad-domain.zendesk.com
-Your email address: wrong@email.com
-Your API token: bad_token
-✅ Configuration saved to: /Users/john/.config/zendesk-cli/config.json
-
-🔍 Testing connection...
-❌ Connection test failed: Authentication failed. Please check your email and API token.
-
-💡 Suggestions:
-   • Check your API token is correct
-   • Verify your email address
-   • Run 'zendesk configure' to update credentials
-
-Please check your credentials and try again.
-```
-
-### Help Output
-
-```bash
-$ zendesk --help
-Usage: zendesk [OPTIONS] COMMAND [ARGS]...
-
-  Zendesk CLI - Manage your Zendesk tickets from the command line.
-
-  This tool allows you to:
-  - List open tickets assigned to you or your groups
-  - Configure your Zendesk credentials securely
-  - Display tickets in a beautiful table format
-
-  Get started by running:
-      zendesk configure
-
-  Then list your tickets with:
-      zendesk tickets
-
-Options:
-  -v, --verbose       Enable verbose output
-  --log-file PATH     Log file path
-  --version           Show the version and exit.
-  --help              Show this message and exit.
-
-Commands:
-  configure  Configure Zendesk CLI credentials and settings.
-  tickets    List open Zendesk tickets assigned to you or your groups.
+$ zendesk tickets --assignee-only --status closed
+📋 Fetching closed tickets assigned to you...
+✅ No closed tickets found!
 ```
 
 ## Configuration
 
-Configuration is stored securely:
+### Automatic Setup
+Configuration is stored securely across platforms:
 
-- **Non-sensitive data**: `~/.config/zendesk-cli/config.json` (Linux/Mac) or `%APPDATA%\zendesk-cli\config.json` (Windows)
-- **API token**: Stored securely in your system keyring
+- **Linux/Mac**: `~/.config/zendesk-cli/config.json`
+- **Windows**: `%APPDATA%\zendesk-cli\config.json`
+- **API Token**: Stored securely in system keyring (not in the JSON file)
 
 ### Manual Configuration
-
-You can also configure using command-line flags:
+Configure using command-line flags:
 
 ```bash
 zendesk configure \
@@ -228,73 +311,59 @@ zendesk configure \
   --test
 ```
 
+### Custom Configuration File
+```bash
+zendesk tickets --config-path ./custom-config.json
+```
+
 ## API Token Setup
 
-1. Log into your Zendesk instance
-2. Go to **Admin Center** → **Apps and integrations** → **APIs** → **Zendesk API**
-3. Enable **"Token access"**
-4. Click **"Add API token"**
-5. Copy the generated token
+1. Log into your Zendesk instance as an administrator
+2. Go to **Admin Center** → **Apps and integrations** → **APIs** → **Zendesk API**  
+3. Enable **"Token access"** if not already enabled
+4. Click **"+ Add API token"**
+5. Enter a description (e.g., "CLI Tool Access")
+6. Copy the generated token (save it securely - you won't see it again)
+7. Use this token when running `zendesk configure`
 
-## Commands
+**Reference**: [Zendesk API Token Documentation](https://developer.zendesk.com/api-reference/introduction/security-and-auth/#api-token)
 
-### `zendesk tickets`
+## Troubleshooting
 
-List open Zendesk tickets with detailed information.
+### Common Issues
 
-**Options:**
-
-- `--assignee-only`: Show only tickets assigned to you
-- `--group ID[,ID,...]`: Filter tickets by group ID(s). Use comma-separated values for multiple groups
-- `--config-path PATH`: Use custom configuration file
-
-**Output includes:**
-
-- Ticket number
-- Team/Group assigned
-- Short description
-- Creation date and days since created
-- Last update date and days since updated
-- Direct link to ticket
-
-### `zendesk configure`
-
-Configure Zendesk CLI credentials and settings.
-
-**Options:**
-
-- `--domain DOMAIN`: Zendesk domain
-- `--email EMAIL`: Your email address
-- `--api-token TOKEN`: Your API token
-- `--config-path PATH`: Custom configuration file path
-- `--test`: Test connection after configuration
-
-### Global Options
-
-- `--verbose, -v`: Enable verbose output
-- `--log-file PATH`: Write logs to file
-- `--help`: Show help message
-
-## Examples
-
+**"No configuration found"**
 ```bash
-# First time setup
+# Solution: Run configuration first
+zendesk configure --test
+```
+
+**"Authentication failed"**
+```bash
+# Solution: Check credentials and reconfigure
 zendesk configure --test
 
-# Daily workflow
-zendesk tickets --assignee-only
+# Check current configuration  
+cat ~/.config/zendesk-cli/config.json
+```
 
-# Team workflow - single group
-zendesk tickets --group 456
+**"Permission denied"**
+- Ensure your Zendesk user has API access enabled
+- Verify your user role has ticket viewing permissions
+- Check that your API token hasn't expired
 
-# Multiple teams workflow
-zendesk tickets --group 456,789,123
+**"Group 'Team Name' not found"**
+- Verify the team name exists in your Zendesk instance
+- Try using the group ID instead: `--group 12345`
+- Check you have access to view that group's tickets
 
-# Debugging
+### Debug Mode
+
+Enable verbose logging for troubleshooting:
+
+```bash
 zendesk --verbose tickets
-
-# Custom configuration
-zendesk --config-path ./my-config.json tickets
+zendesk --log-file debug.log tickets
 ```
 
 ## Development
@@ -302,15 +371,15 @@ zendesk --config-path ./my-config.json tickets
 ### Setup Development Environment
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+# Clone and setup
+git clone https://github.com/jamiemills/zendesk-cli.git
 cd zendesk-cli
 
-# Create virtual environment
+# Create virtual environment  
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install in development mode
+# Install with development dependencies
 pip install -e ".[dev]"
 
 # Install pre-commit hooks
@@ -320,14 +389,15 @@ pre-commit install
 ### Run Tests
 
 ```bash
-# Run all tests
+# All tests
 pytest
 
-# Run with coverage
+# With coverage
 pytest --cov=src --cov-report=html
 
-# Run integration tests with real API
-python test_real_api.py
+# Specific test category
+pytest tests/unit/
+pytest tests/integration/
 ```
 
 ### Code Quality
@@ -336,42 +406,30 @@ python test_real_api.py
 # Format code
 black src/ tests/
 
-# Sort imports
+# Sort imports  
 isort src/ tests/
 
-# Lint code
+# Lint
 ruff check src/ tests/
 
 # Type checking
 mypy src/
 ```
 
-## Troubleshooting
-
-### Authentication Issues
-
-```bash
-# Test your configuration
-zendesk configure --test
-
-# Check configuration
-cat ~/.config/zendesk-cli/config.json
-```
-
-### Common Errors
-
-- **"No configuration found"**: Run `zendesk configure` first
-- **"Authentication failed"**: Check your API token and email
-- **"Permission denied"**: Ensure your user has access to the Zendesk API
-
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Write tests for your changes
-4. Ensure all tests pass
-5. Submit a pull request
+4. Ensure all tests pass (`pytest`)
+5. Ensure code quality checks pass (`black`, `ruff`, `mypy`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-## License
+## Support
 
-MIT License - see LICENSE file for details.
+- **Documentation**: This README and inline help (`zendesk --help`)
+- **Repository**: [https://github.com/jamiemills/zendesk-cli](https://github.com/jamiemills/zendesk-cli)
+- **Issues**: Report bugs and request features via [GitHub Issues](https://github.com/jamiemills/zendesk-cli/issues)
+- **API Reference**: [Zendesk API Documentation](https://developer.zendesk.com/api-reference/)

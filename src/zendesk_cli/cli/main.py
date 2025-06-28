@@ -36,7 +36,7 @@ def main(verbose: bool, log_file: str) -> None:
         zendesk tickets
     """
     # Setup logging
-    log_level = "DEBUG" if verbose else "INFO"
+    log_level = "DEBUG" if verbose else "WARNING"
     log_path = Path(log_file) if log_file else None
     setup_logging(level=log_level, log_file=log_path, verbose=verbose)
     
