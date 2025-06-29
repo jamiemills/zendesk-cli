@@ -1,12 +1,24 @@
 """Main CLI entry point for zendesk-cli."""
 
-import click
 import logging
+import sys
 from pathlib import Path
 
-from .commands.tickets import tickets
-from .commands.configure import configure
-from ..utils.logging import setup_logging
+# Try to import CLI dependencies, gracefully handle missing ones
+try:
+    import click
+except ImportError:
+    print("CLI dependencies not installed. Install with: pip install zendesk-cli[cli]")
+    sys.exit(1)
+
+try:
+    from .commands.tickets import tickets
+    from .commands.configure import configure
+    from ..utils.logging import setup_logging
+except ImportError as e:
+    print(f"Failed to import CLI modules: {e}")
+    print("Install CLI dependencies with: pip install zendesk-cli[cli]")
+    sys.exit(1)
 
 
 @click.group()

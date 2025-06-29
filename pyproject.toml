@@ -5,20 +5,24 @@ build-backend = "hatchling.build"
 [project]
 name = "zendesk-cli"
 version = "0.1.0"
-description = "CLI tool for managing Zendesk tickets"
+description = "CLI tool and library for managing Zendesk tickets"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "click>=8.1.0",
+    # Core library dependencies
     "requests>=2.31.0",
     "pydantic>=2.5.0",
-    "rich>=13.7.0",
     "keyring>=24.3.0",
 ]
 
 [project.optional-dependencies]
+cli = [
+    # CLI-specific dependencies
+    "click>=8.1.0",
+    "rich>=13.7.0",
+]
 dev = [
     # Testing
     "pytest>=7.4.0",

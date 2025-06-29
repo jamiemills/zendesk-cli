@@ -1,6 +1,6 @@
 # Zendesk CLI
 
-A powerful command-line utility for managing Zendesk tickets directly from your terminal. View, filter, sort, and export tickets with beautiful table formatting and comprehensive filtering options.
+A powerful command-line utility and Python library for managing Zendesk tickets. Use it as a CLI tool for terminal-based ticket management, or integrate it into your Python applications as a library.
 
 ## Core Concepts
 
@@ -13,32 +13,40 @@ A powerful command-line utility for managing Zendesk tickets directly from your 
 - 💾 **CSV export** - Export filtered results with full descriptions
 - 🔒 **Secure** - API tokens stored safely in system keyring
 - 🎨 **Beautiful output** - Rich terminal tables with color coding
+- 📦 **Library ready** - Use programmatically in your Python applications
+- 🔧 **Flexible installation** - CLI-only or library-only installation options
 
 ## Installation
 
-### From GitHub
+### As CLI Tool (Full Installation)
 
 ```bash
-# Clone the repository
+# Install directly from GitHub with CLI dependencies
+pip install "git+https://github.com/jamiemills/zendesk-cli.git[cli]"
+
+# Or clone and install locally
 git clone https://github.com/jamiemills/zendesk-cli.git
 cd zendesk-cli
-
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install the package
-pip install -e .
-
-# Or install with development dependencies
-pip install -e ".[dev]"
+pip install -e ".[cli]"
 ```
 
-### Direct Installation
+### As Library Only
 
 ```bash
-# Install directly from GitHub
+# Install core library without CLI dependencies
 pip install git+https://github.com/jamiemills/zendesk-cli.git
+
+# Or locally
+pip install -e .
+```
+
+### For Development
+
+```bash
+# Clone and install with all dependencies
+git clone https://github.com/jamiemills/zendesk-cli.git
+cd zendesk-cli
+pip install -e ".[cli,dev]"
 ```
 
 ## Quick Start
@@ -426,6 +434,147 @@ mypy src/
 6. Commit your changes (`git commit -m 'Add amazing feature'`)
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
+
+## Library Usage
+
+The zendesk-cli package can be used as a Python library in your own applications. This is useful for automation, integration with web applications, or building custom reporting tools.
+
+### Basic Library Usage
+
+```python
+from zendesk_cli import ZendeskLibrary
+
+# Initialize with credentials
+zd = ZendeskLibrary.from_credentials(
+    domain="company.zendesk.com",
+    email="user@company.com",
+    api_token="your_token"
+)
+
+# Or initialize from config file
+zd = ZendeskLibrary.from_config()
+
+# Test connection
+if zd.test_connection():
+    print("✅ Connected successfully")
+
+# Get tickets with filtering
+tickets = zd.get_tickets(
+    status=["open", "pending"],
+    assignee_only=True,
+    sort_by="days_updated"
+)
+
+print(f"Found {len(tickets)} tickets")
+
+# Export to CSV
+zd.export_to_csv(tickets, "my_tickets.csv")
+```
+
+### Web Application Integration
+
+```python
+from flask import Flask, jsonify
+from zendesk_cli import ZendeskLibrary
+
+app = Flask(__name__)
+zd = ZendeskLibrary.from_config()
+
+@app.route('/api/tickets')
+def get_tickets_api():
+    try:
+        tickets = zd.get_tickets(status=["open", "pending"])
+        return jsonify({
+            'success': True,
+            'count': len(tickets),
+            'tickets': [ticket.dict() for ticket in tickets]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+```
+
+### Automated Reporting
+
+```python
+from zendesk_cli import ZendeskLibrary
+from datetime import datetime
+
+def daily_stale_tickets_report():
+    zd = ZendeskLibrary.from_config()
+    
+    # Get stale tickets (not updated in 3+ days)
+    all_tickets = zd.get_tickets(status=["open", "pending"])
+    stale_tickets = [t for t in all_tickets if t.days_since_updated >= 3]
+    
+    # Export with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zd.export_to_csv(stale_tickets, f"reports/stale_tickets_{timestamp}.csv")
+    
+    return len(stale_tickets)
+```
+
+### Progress Callbacks
+
+```python
+from zendesk_cli import ZendeskLibrary
+
+def progress_callback(message):
+    print(f"[INFO] {message}")
+
+zd = ZendeskLibrary.from_credentials(
+    domain="company.zendesk.com",
+    email="user@company.com",
+    api_token="your_token",
+    progress_callback=progress_callback
+)
+
+# Operations will now report progress:
+# [INFO] Fetching tickets...
+# [INFO] Found 25 ticket(s)
+tickets = zd.get_tickets()
+```
+
+### Error Handling
+
+```python
+from zendesk_cli import (
+    ZendeskLibrary,
+    AuthenticationError,
+    NetworkError,
+    ConfigurationError
+)
+
+try:
+    zd = ZendeskLibrary.from_config()
+    tickets = zd.get_tickets()
+    
+except AuthenticationError:
+    print("❌ Invalid credentials")
+except NetworkError:
+    print("❌ Network connection failed")
+except ConfigurationError:
+    print("❌ Configuration missing or invalid")
+except Exception as e:
+    print(f"❌ Unexpected error: {e}")
+```
+
+### Library API Reference
+
+The library provides these main classes:
+
+- **`ZendeskLibrary`** - Main interface for all operations
+- **`LibraryTicket`** - Ticket data model with JSON serialization
+- **`LibraryUser`** - User data model  
+- **`LibraryGroup`** - Group/team data model
+
+Key methods on `ZendeskLibrary`:
+- `get_tickets()` - Retrieve tickets with filtering and sorting
+- `get_tickets_with_teams()` - Retrieve tickets with resolved team names
+- `export_to_csv()` - Export tickets to CSV format
+- `test_connection()` - Verify API connection
+- `configure()` - Update configuration programmatically
+
+For complete examples, see the [`examples/library_usage.py`](examples/library_usage.py) file.
 
 ## Support
 
