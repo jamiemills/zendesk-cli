@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!src/zendesk_cli/lib/
 lib64/
 parts/
 sdist/

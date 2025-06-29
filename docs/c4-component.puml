@@ -1,0 +1,54 @@
+@startuml TicketQ Component Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title TicketQ Core Framework Components
+
+Container(cli, "CLI Interface", "Python Click")
+Container(library, "Library API", "Python")
+
+Container_Boundary(core, "Core Framework") {
+    Component(factory, "Adapter Factory", "Python Class", "Creates and configures adapter instances with dependency injection")
+    Component(registry, "Plugin Registry", "Python Class", "Discovers and manages adapter plugins via entry points")
+    Component(config_manager, "Configuration Manager", "Python Class", "Handles multi-file configuration and keyring integration")
+    Component(base_interfaces, "Base Interfaces", "Python ABC", "Abstract base classes for adapters, auth, and clients")
+    Component(models, "Generic Models", "Python Classes", "Platform-agnostic ticket, user, and group models")
+    Component(exceptions, "Exception Hierarchy", "Python Classes", "Structured error handling with user guidance")
+}
+
+Container_Boundary(adapters, "Adapter Plugins") {
+    Component(zendesk_adapter, "Zendesk Adapter", "Python Class", "Zendesk-specific implementation")
+    Component(zendesk_auth, "Zendesk Auth", "Python Class", "API token authentication")
+    Component(zendesk_client, "Zendesk Client", "Python Class", "REST API client with rate limiting")
+    Component(zendesk_models, "Zendesk Mappers", "Python Classes", "Data transformation between Zendesk and generic models")
+}
+
+ContainerDb(config_files, "Config Files", "JSON")
+ContainerDb(keyring, "System Keyring", "Encrypted Storage")
+System_Ext(zendesk_api, "Zendesk REST API")
+
+Rel(cli, factory, "Creates adapters")
+Rel(library, factory, "Creates adapters")
+
+Rel(factory, registry, "Discovers available adapters")
+Rel(factory, config_manager, "Loads configuration")
+Rel(factory, zendesk_adapter, "Instantiates and configures")
+
+Rel(registry, zendesk_adapter, "Discovers via entry points")
+
+Rel(zendesk_adapter, base_interfaces, "Implements BaseAdapter")
+Rel(zendesk_auth, base_interfaces, "Implements BaseAuth")
+Rel(zendesk_client, base_interfaces, "Implements BaseClient")
+
+Rel(zendesk_adapter, zendesk_auth, "Creates authentication")
+Rel(zendesk_adapter, zendesk_client, "Creates API client")
+Rel(zendesk_client, zendesk_models, "Uses mappers for data transformation")
+
+Rel(zendesk_models, models, "Creates generic models")
+Rel(factory, exceptions, "Raises structured errors")
+
+Rel(config_manager, config_files, "Reads JSON configuration")
+Rel(config_manager, keyring, "Stores/retrieves API tokens")
+
+Rel(zendesk_client, zendesk_api, "HTTP requests with authentication")
+
+@enduml

@@ -1,0 +1,27 @@
+@startuml TicketQ System Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!include DEVICONS/python.puml
+
+title TicketQ System Context Diagram
+
+Person(user, "Developer/Support Agent", "Uses TicketQ for ticket management across multiple platforms")
+Person(admin, "System Administrator", "Configures and maintains TicketQ installations")
+
+System(ticketq, "TicketQ", "Universal ticketing CLI and library for unified ticket management", $sprite="python")
+
+System_Ext(zendesk, "Zendesk", "Customer support ticketing system")
+System_Ext(jira, "Jira", "Issue and project tracking system")
+System_Ext(servicenow, "ServiceNow", "IT service management platform")
+System_Ext(keyring, "System Keyring", "Secure credential storage (macOS Keychain, Windows Credential Store, Linux Secret Service)")
+
+Rel(user, ticketq, "Uses CLI commands and library API")
+Rel(admin, ticketq, "Configures adapters and credentials")
+
+Rel(ticketq, zendesk, "Retrieves tickets via REST API")
+Rel(ticketq, jira, "Retrieves issues via REST API", "Future")
+Rel(ticketq, servicenow, "Retrieves incidents via REST API", "Future")
+Rel(ticketq, keyring, "Stores/retrieves API tokens securely")
+
+@enduml

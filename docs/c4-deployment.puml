@@ -1,0 +1,59 @@
+@startuml TicketQ Deployment Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!include DEVICONS/apple.puml
+!include DEVICONS/windows.puml
+!include DEVICONS/linux.puml
+
+title TicketQ Deployment Scenarios
+
+Deployment_Node(dev_machine, "Developer Machine", "macOS/Windows/Linux") {
+    Deployment_Node(python_env, "Python Environment", "Python 3.8+") {
+        Container(ticketq_cli, "TicketQ CLI", "pip install ticketq[cli]")
+        Container(zendesk_plugin, "Zendesk Adapter", "pip install ticketq-zendesk")
+    }
+    
+    Deployment_Node(config_dir, "Configuration Directory", "~/.config/ticketq/") {
+        ContainerDb(main_config, "config.json", "Main configuration and default adapter")
+        ContainerDb(adapter_configs, "adapter.json files", "Per-adapter configuration files")
+    }
+    
+    Deployment_Node(keyring_system, "System Keyring") {
+        ContainerDb(macos_keychain, "macOS Keychain", "Secure credential storage")
+        ContainerDb(windows_cred, "Windows Credential Store", "Secure credential storage") 
+        ContainerDb(linux_secret, "Linux Secret Service", "Secure credential storage")
+    }
+}
+
+Deployment_Node(ci_server, "CI/CD Pipeline", "GitHub Actions/Jenkins") {
+    Deployment_Node(container, "Docker Container", "python:3.8-slim") {
+        Container(automation_script, "Automation Script", "TicketQ Library API for reporting")
+        Container(ticketq_lib, "TicketQ Library", "pip install ticketq")
+    }
+    
+    ContainerDb(env_vars, "Environment Variables", "API tokens for CI environment")
+}
+
+Deployment_Node(web_app, "Web Application", "Flask/Django Server") {
+    Container(api_service, "Ticket API Service", "TicketQ Library integration")
+    ContainerDb(app_config, "Application Config", "Database-stored adapter configurations")
+}
+
+System_Ext(zendesk, "Zendesk Cloud", "SaaS ticketing platform")
+System_Ext(jira_cloud, "Jira Cloud", "SaaS issue tracking")
+
+Rel(ticketq_cli, zendesk, "HTTPS API calls")
+Rel(automation_script, zendesk, "HTTPS API calls")
+Rel(api_service, zendesk, "HTTPS API calls")
+
+Rel(ticketq_cli, main_config, "Reads configuration")
+Rel(ticketq_cli, adapter_configs, "Reads adapter settings")
+Rel(ticketq_cli, macos_keychain, "Retrieves API tokens", "macOS")
+Rel(ticketq_cli, windows_cred, "Retrieves API tokens", "Windows")
+Rel(ticketq_cli, linux_secret, "Retrieves API tokens", "Linux")
+
+Rel(automation_script, env_vars, "Reads API credentials")
+Rel(api_service, app_config, "Reads configuration")
+
+@enduml

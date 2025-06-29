@@ -1,0 +1,43 @@
+@startuml TicketQ Container Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!include DEVICONS/python.puml
+!include DEVICONS/terminal.puml
+
+title TicketQ Container Diagram
+
+Person(user, "Developer/Support Agent", "Uses TicketQ for unified ticket management")
+
+System_Boundary(ticketq, "TicketQ System") {
+    Container(cli, "CLI Interface", "Python Click", "Command-line interface for ticket operations", $sprite="terminal")
+    Container(library, "Library API", "Python", "Programmatic interface for automation and integration", $sprite="python")
+    Container(core, "Core Framework", "Python", "Plugin registry, adapter factory, configuration management")
+    Container(zendesk_adapter, "Zendesk Adapter", "Python Plugin", "Zendesk-specific implementation")
+    Container(jira_adapter, "Jira Adapter", "Python Plugin", "Jira-specific implementation (Future)")
+}
+
+System_Boundary(config, "Configuration") {
+    ContainerDb(config_files, "Config Files", "JSON", "Adapter configurations and settings")
+    ContainerDb(keyring_store, "Keyring Storage", "System Keyring", "Encrypted API tokens and credentials")
+}
+
+System_Ext(zendesk, "Zendesk API", "REST API for customer support tickets")
+System_Ext(jira, "Jira API", "REST API for issue tracking")
+
+Rel(user, cli, "Executes commands (tq tickets, tq configure)")
+Rel(user, library, "Imports and uses Python API")
+
+Rel(cli, core, "Uses adapter factory and registry")
+Rel(library, core, "Uses adapter factory and registry")
+
+Rel(core, zendesk_adapter, "Loads and manages plugin")
+Rel(core, jira_adapter, "Loads and manages plugin", "Future")
+
+Rel(core, config_files, "Reads configuration")
+Rel(core, keyring_store, "Stores/retrieves secrets")
+
+Rel(zendesk_adapter, zendesk, "HTTP/REST calls")
+Rel(jira_adapter, jira, "HTTP/REST calls", "Future")
+
+@enduml

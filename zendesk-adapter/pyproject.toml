@@ -3,14 +3,14 @@ requires = ["hatchling>=1.12.2"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ticketq"
+name = "ticketq-zendesk"
 version = "0.1.0"
-description = "Universal command-line tool and library for ticketing systems"
+description = "Zendesk adapter for TicketQ - Universal ticketing system CLI and library"
 authors = [{name = "Jamie Mills", email = "jamie@jamiemills.com"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
-keywords = ["tickets", "zendesk", "jira", "servicenow", "cli", "api", "customer-service"]
+keywords = ["zendesk", "tickets", "ticketq", "adapter", "plugin", "api"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -33,51 +33,39 @@ classifiers = [
 ]
 
 dependencies = [
-    # Core library dependencies
+    # Core TicketQ dependency
+    "ticketq>=0.1.0",
+    # HTTP client for Zendesk API
     "requests>=2.25.0",
-    "keyring>=23.0.0",
-    "importlib-metadata>=4.0.0; python_version<'3.10'",
 ]
 
 [project.urls]
 Homepage = "https://github.com/jamiemills/ticketq"
 Repository = "https://github.com/jamiemills/ticketq"
 Issues = "https://github.com/jamiemills/ticketq/issues"
-Documentation = "https://github.com/jamiemills/ticketq#readme"
+Documentation = "https://github.com/jamiemills/ticketq#zendesk-adapter"
+"Zendesk API Docs" = "https://developer.zendesk.com/api-reference/"
 
 [project.optional-dependencies]
-cli = [
-    # CLI-specific dependencies
-    "click>=8.0.0",
-    "rich>=10.0.0",
-]
 dev = [
     # Testing
     "pytest>=6.0",
     "pytest-cov>=2.0",
     "pytest-mock>=3.0",
     "responses>=0.20.0",
-    "factory-boy>=3.0",
-    "freezegun>=1.0",
     
     # Code Quality
     "ruff>=0.1.0",
     "mypy>=1.0",
     "black>=22.0",
-    "isort>=5.0",
-    "bandit>=1.7.0",
-    "pre-commit>=2.0",
 ]
 
-[project.scripts]
-tq = "ticketq.cli.main:main"
-
+# Register this adapter with TicketQ
 [project.entry-points."ticketq.adapters"]
-# Entry points for adapter discovery
-# Adapters will register themselves here when installed
+zendesk = "ticketq_zendesk.adapter:ZendeskAdapter"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ticketq"]
+packages = ["src/ticketq_zendesk"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -87,10 +75,8 @@ include = [
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py38"
 line-length = 88
-
-[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -106,28 +92,28 @@ ignore = [
     "S101",  # assert statements (fine for tests)
 ]
 
-[tool.ruff.lint.per-file-ignores]
+[tool.ruff.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.8"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
-disallow_untyped_decorators = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = [
+    "requests.*",
+    "keyring.*",
+]
+ignore_missing_imports = true
 
 [tool.black]
-target-version = ['py311']
+target-version = ['py38']
 line-length = 88
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3

@@ -1,356 +1,373 @@
 #!/usr/bin/env python3
 """
-Example usage of zendesk-cli as a library.
+TicketQ Library Usage Examples
 
-This script demonstrates how to use the zendesk-cli package programmatically
-in your own Python applications.
+This file demonstrates how to use TicketQ as a Python library for programmatic
+access to ticketing systems across different platforms.
+
+Prerequisites:
+- Install TicketQ: pip install "ticketq[cli]"
+- Install adapter: pip install ticketq-zendesk
+- Configure adapter: tq configure --adapter zendesk
 """
 
-import json
 from datetime import datetime
-from pathlib import Path
+from typing import List
+import logging
 
-from zendesk_cli import ZendeskLibrary, LibraryTicket, ConfigurationError
+from ticketq import TicketQLibrary
+from ticketq.lib.models import LibraryTicket
+from ticketq.models.exceptions import (
+    AuthenticationError,
+    NetworkError,
+    ConfigurationError,
+    PluginError,
+    TicketQError
+)
+
+# Configure logging to see progress messages
+logging.basicConfig(level=logging.INFO)
 
 
-def basic_usage_example():
+def basic_usage():
     """Basic library usage example."""
-    print("=== Basic Library Usage ===")
+    print("=" * 60)
+    print("BASIC LIBRARY USAGE")
+    print("=" * 60)
     
-    # Method 1: Initialize with explicit credentials
     try:
-        zd = ZendeskLibrary.from_credentials(
-            domain="your-domain.zendesk.com",
-            email="your-email@company.com",
-            api_token="your-api-token"
-        )
-        print("✅ Initialized with credentials")
-    except ConfigurationError as e:
-        print(f"⚠️  Configuration error (expected with fake credentials): {e}")
-        return
-    
-    # Method 2: Initialize from config file
-    try:
-        zd = ZendeskLibrary.from_config()
-        print("✅ Initialized from config file")
-    except ConfigurationError as e:
-        print(f"⚠️  Config file not found (expected): {e}")
-        return
-    
-    # Test connection
-    try:
-        if zd.test_connection():
-            print("✅ Connection test successful")
+        # Initialize with auto-detected adapter
+        print("🔌 Initializing TicketQ library...")
+        tq = TicketQLibrary.from_config()
+        
+        # Get adapter information
+        adapter_info = tq.get_adapter_info()
+        print(f"✅ Using {adapter_info['display_name']} adapter v{adapter_info['version']}")
+        
+        # Test connection
+        print("🔍 Testing connection...")
+        if tq.test_connection():
+            print("✅ Connection successful!")
+        else:
+            print("❌ Connection failed!")
+            return
+        
+        # Get current user
+        user = tq.get_current_user()
+        if user:
+            print(f"👤 Authenticated as: {user.name} ({user.email})")
+        
+        # Get basic ticket list
+        print("\n📋 Fetching open tickets...")
+        tickets = tq.get_tickets(status="open")
+        print(f"Found {len(tickets)} open tickets")
+        
+        # Display first few tickets
+        for i, ticket in enumerate(tickets[:3]):
+            print(f"  #{ticket.id}: {ticket.title[:50]}...")
+            print(f"    Status: {ticket.status}, Team: {ticket.team_name or 'Unassigned'}")
+            print(f"    Age: {ticket.days_since_created} days")
+        
+        if len(tickets) > 3:
+            print(f"  ... and {len(tickets) - 3} more tickets")
+            
     except Exception as e:
-        print(f"⚠️  Connection test failed (expected): {e}")
-        return
+        print(f"❌ Error: {e}")
+
+
+def advanced_filtering():
+    """Advanced filtering and sorting examples."""
+    print("\n" + "=" * 60)
+    print("ADVANCED FILTERING & SORTING")
+    print("=" * 60)
     
-    # Get tickets with various filters
     try:
-        # Get all open tickets
-        tickets = zd.get_tickets(status="open")
-        print(f"📋 Found {len(tickets)} open tickets")
+        tq = TicketQLibrary.from_config()
         
-        # Get tickets with multiple statuses
-        tickets = zd.get_tickets(status=["open", "pending", "hold"])
-        print(f"📋 Found {len(tickets)} tickets (open, pending, hold)")
+        # Multiple status filtering
+        print("🔍 Getting tickets with multiple statuses...")
+        tickets = tq.get_tickets(status=["open", "pending"])
+        print(f"Found {len(tickets)} open/pending tickets")
         
-        # Get only your assigned tickets
-        tickets = zd.get_tickets(assignee_only=True)
-        print(f"👤 Found {len(tickets)} tickets assigned to you")
+        # Assignee-only filtering
+        print("\n🔍 Getting your assigned tickets...")
+        my_tickets = tq.get_tickets(assignee_only=True)
+        print(f"Found {len(my_tickets)} tickets assigned to you")
         
-        # Get tickets for specific teams
-        tickets = zd.get_tickets(groups=["Support Team", "Engineering"])
-        print(f"🏢 Found {len(tickets)} tickets for specified teams")
+        # Group/team filtering
+        print("\n🔍 Getting tickets by team...")
+        groups = tq.get_groups()
+        if groups:
+            first_group = groups[0]
+            print(f"Filtering by team: {first_group.name}")
+            team_tickets = tq.get_tickets(groups=[first_group.name])
+            print(f"Found {len(team_tickets)} tickets for {first_group.name}")
         
-        # Get tickets with sorting
-        tickets = zd.get_tickets(
+        # Sorting examples
+        print("\n📊 Sorting examples...")
+        
+        # Sort by staleness (most urgent first)
+        stale_tickets = tq.get_tickets(
             status=["open", "pending"],
-            sort_by="days_updated",  # Most stale first
-            include_team_names=True
+            sort_by="days_updated"
         )
-        print(f"📊 Found {len(tickets)} sorted tickets")
+        print(f"Tickets sorted by staleness: {len(stale_tickets)}")
+        if stale_tickets:
+            stalest = stale_tickets[0]
+            print(f"  Most stale: #{stalest.id} ({stalest.days_since_updated} days since update)")
         
-        # Export to CSV
-        if tickets:
-            csv_path = "example_tickets.csv"
-            zd.export_to_csv(tickets, csv_path)
-            print(f"💾 Exported tickets to {csv_path}")
+        # Sort by creation date (newest first)
+        recent_tickets = tq.get_tickets(sort_by="created_at")
+        print(f"Tickets sorted by creation date: {len(recent_tickets)}")
+        if recent_tickets:
+            newest = recent_tickets[0]
+            print(f"  Newest: #{newest.id} (created {newest.days_since_created} days ago)")
             
     except Exception as e:
-        print(f"⚠️  Ticket operations failed: {e}")
+        print(f"❌ Error: {e}")
 
 
-def flask_integration_example():
-    """Example of integrating with a Flask web application."""
-    print("\n=== Flask Integration Example ===")
+def search_functionality():
+    """Search functionality example."""
+    print("\n" + "=" * 60)
+    print("SEARCH FUNCTIONALITY")
+    print("=" * 60)
     
     try:
-        from flask import Flask, jsonify, request
+        tq = TicketQLibrary.from_config()
         
-        app = Flask(__name__)
+        # Search for tickets (adapter-specific query format)
+        print("🔍 Searching tickets...")
         
-        # Initialize Zendesk library (in real app, do this once)
-        zd = ZendeskLibrary.from_config()
+        # Note: Search query format depends on the adapter
+        # For Zendesk: can use Zendesk search syntax
+        # For Jira: would use JQL syntax
+        # For ServiceNow: would use ServiceNow query syntax
         
-        @app.route('/api/tickets')
-        def get_tickets_api():
-            """API endpoint to get tickets."""
-            # Get query parameters
-            status = request.args.get('status', 'open')
-            assignee_only = request.args.get('assignee_only', 'false').lower() == 'true'
-            groups = request.args.get('groups')
-            sort_by = request.args.get('sort_by')
+        adapter_info = tq.get_adapter_info()
+        if adapter_info['name'] == 'zendesk':
+            # Example Zendesk search
+            search_results = tq.search_tickets("type:ticket status:open")
+            print(f"Found {len(search_results)} tickets from search")
             
-            # Parse groups parameter
-            group_list = groups.split(',') if groups else None
+            # Display search results
+            for ticket in search_results[:3]:
+                print(f"  #{ticket.id}: {ticket.title[:50]}...")
+        else:
+            print(f"Search syntax for {adapter_info['name']} adapter not shown in this example")
             
-            try:
-                tickets = zd.get_tickets(
-                    status=status.split(','),
-                    assignee_only=assignee_only,
-                    groups=group_list,
-                    sort_by=sort_by
-                )
-                
-                # Convert to JSON-serializable format
-                ticket_data = [ticket.dict() for ticket in tickets]
-                
-                return jsonify({
-                    'success': True,
-                    'count': len(tickets),
-                    'tickets': ticket_data
-                })
-                
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': str(e)
-                }), 500
-        
-        @app.route('/api/export')
-        def export_tickets_api():
-            """API endpoint to export tickets to CSV."""
-            try:
-                tickets = zd.get_tickets()
-                csv_path = f"exports/tickets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                
-                # Ensure export directory exists
-                Path(csv_path).parent.mkdir(exist_ok=True)
-                
-                zd.export_to_csv(tickets, csv_path)
-                
-                return jsonify({
-                    'success': True,
-                    'file_path': csv_path,
-                    'ticket_count': len(tickets)
-                })
-                
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': str(e)
-                }), 500
-        
-        print("🌐 Flask routes defined:")
-        print("  GET /api/tickets?status=open&assignee_only=true")
-        print("  GET /api/export")
-        
-    except ImportError:
-        print("⚠️  Flask not installed - skipping Flask example")
     except Exception as e:
-        print(f"⚠️  Flask example setup failed: {e}")
+        print(f"❌ Search error: {e}")
 
 
-def automated_reporting_example():
-    """Example of automated ticket reporting."""
-    print("\n=== Automated Reporting Example ===")
+def csv_export_examples():
+    """CSV export functionality examples."""
+    print("\n" + "=" * 60)
+    print("CSV EXPORT EXAMPLES")
+    print("=" * 60)
     
     try:
-        # Initialize library
-        zd = ZendeskLibrary.from_config()
+        tq = TicketQLibrary.from_config()
         
-        # Generate daily stale tickets report
-        def daily_stale_tickets_report():
-            """Generate report of stale tickets."""
-            print("📊 Generating daily stale tickets report...")
-            
-            # Get tickets that haven't been updated in 3+ days
-            all_tickets = zd.get_tickets(status=["open", "pending"])
-            stale_tickets = [
-                ticket for ticket in all_tickets 
-                if ticket.days_since_updated >= 3
-            ]
-            
-            # Sort by staleness (most stale first)
-            stale_tickets.sort(key=lambda t: t.days_since_updated, reverse=True)
-            
-            # Export to CSV with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            csv_path = f"reports/stale_tickets_{timestamp}.csv"
-            
-            # Ensure reports directory exists
-            Path(csv_path).parent.mkdir(exist_ok=True)
-            
-            zd.export_to_csv(stale_tickets, csv_path)
-            
-            # Generate summary
-            summary = {
-                'total_stale_tickets': len(stale_tickets),
-                'most_stale_days': stale_tickets[0].days_since_updated if stale_tickets else 0,
-                'teams_affected': len(set(t.team_name for t in stale_tickets if t.team_name)),
-                'report_path': str(csv_path)
-            }
-            
-            # Save summary as JSON
-            summary_path = f"reports/stale_summary_{timestamp}.json"
-            with open(summary_path, 'w') as f:
-                json.dump(summary, f, indent=2)
-            
-            print(f"📋 Found {len(stale_tickets)} stale tickets")
-            print(f"💾 Report saved to {csv_path}")
-            print(f"📄 Summary saved to {summary_path}")
-            
-            return summary
+        # Get tickets for export
+        tickets = tq.get_tickets(status=["open", "pending"], sort_by="days_updated")
         
-        # Generate team workload report
-        def team_workload_report():
-            """Generate report of ticket distribution by team."""
-            print("👥 Generating team workload report...")
-            
-            tickets = zd.get_tickets(status=["open", "pending"])
-            
-            # Group by team
-            team_workload = {}
-            for ticket in tickets:
-                team = ticket.team_name or "Unassigned"
-                if team not in team_workload:
-                    team_workload[team] = {
-                        'total_tickets': 0,
-                        'avg_age_days': 0,
-                        'oldest_ticket_days': 0
-                    }
-                
-                team_workload[team]['total_tickets'] += 1
-                team_workload[team]['oldest_ticket_days'] = max(
-                    team_workload[team]['oldest_ticket_days'],
-                    ticket.days_since_created
-                )
-            
-            # Calculate averages
-            for team, data in team_workload.items():
-                team_tickets = [t for t in tickets if (t.team_name or "Unassigned") == team]
-                if team_tickets:
-                    data['avg_age_days'] = sum(t.days_since_created for t in team_tickets) // len(team_tickets)
-            
-            # Save report
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_path = f"reports/team_workload_{timestamp}.json"
-            
-            Path(report_path).parent.mkdir(exist_ok=True)
-            
-            with open(report_path, 'w') as f:
-                json.dump(team_workload, f, indent=2)
-            
-            print(f"👥 Analyzed {len(team_workload)} teams")
-            print(f"📄 Report saved to {report_path}")
-            
-            return team_workload
+        if not tickets:
+            print("No tickets found for export")
+            return
         
-        # Run reports (would normally be scheduled)
-        print("🔄 Running automated reports...")
-        # daily_stale_tickets_report()
-        # team_workload_report()
-        print("✅ Reports would be generated here")
+        print(f"📊 Exporting {len(tickets)} tickets...")
+        
+        # Basic export with full descriptions
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        csv_file = f"tickets_export_{timestamp}.csv"
+        
+        tq.export_to_csv(tickets, csv_file, include_full_description=True)
+        print(f"✅ Full export saved to: {csv_file}")
+        
+        # Export with truncated descriptions (faster processing)
+        csv_file_short = f"tickets_summary_{timestamp}.csv"
+        tq.export_to_csv(tickets, csv_file_short, include_full_description=False)
+        print(f"✅ Summary export saved to: {csv_file_short}")
+        
+        print(f"\n📋 Export includes these columns:")
+        print("  • Ticket ID, Title, Status, Team Name")
+        print("  • Description (full or truncated)")
+        print("  • Created/Updated dates and age calculations")
+        print("  • Direct link to ticket in source system")
+        print("  • Adapter name for multi-system exports")
         
     except Exception as e:
-        print(f"⚠️  Reporting example failed: {e}")
+        print(f"❌ Export error: {e}")
+
+
+def error_handling_examples():
+    """Comprehensive error handling examples."""
+    print("\n" + "=" * 60)
+    print("ERROR HANDLING EXAMPLES")
+    print("=" * 60)
+    
+    # Example 1: Configuration errors
+    print("🧪 Testing configuration error handling...")
+    try:
+        # Try to use non-existent adapter
+        tq = TicketQLibrary.from_config(adapter_name="nonexistent")
+    except ConfigurationError as e:
+        print(f"✅ Caught ConfigurationError: {e.message}")
+        if e.suggestions:
+            print("   Suggestions:", ", ".join(e.suggestions[:2]))
+    except PluginError as e:
+        print(f"✅ Caught PluginError: {e.message}")
+        
+    # Example 2: Connection testing with error handling
+    print("\n🧪 Testing connection error handling...")
+    try:
+        tq = TicketQLibrary.from_config()
+        
+        # Test various operations with error handling
+        tickets = tq.get_tickets()
+        print(f"✅ Successfully retrieved {len(tickets)} tickets")
+        
+    except AuthenticationError as e:
+        print(f"❌ Authentication failed: {e.message}")
+        print("   💡 Tip: Check your API credentials with 'tq configure --test'")
+        
+    except NetworkError as e:
+        print(f"❌ Network error: {e.message}")
+        print("   💡 Tip: Check your internet connection and firewall settings")
+        
+    except TicketQError as e:
+        print(f"❌ TicketQ error: {e.message}")
+        if e.suggestions:
+            print("   Suggestions:")
+            for suggestion in e.suggestions:
+                print(f"     • {suggestion}")
+                
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
 
 
 def progress_callback_example():
-    """Example using progress callbacks for long operations."""
-    print("\n=== Progress Callback Example ===")
+    """Progress callback functionality example."""
+    print("\n" + "=" * 60)
+    print("PROGRESS CALLBACK EXAMPLE")
+    print("=" * 60)
     
-    progress_log = []
-    
-    def progress_callback(message):
-        """Callback to track progress."""
+    def progress_callback(message: str) -> None:
+        """Custom progress callback with timestamp."""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        log_entry = f"[{timestamp}] {message}"
-        progress_log.append(log_entry)
-        print(f"🔄 {log_entry}")
+        print(f"[{timestamp}] 📊 {message}")
     
     try:
         # Initialize with progress callback
-        zd = ZendeskLibrary.from_credentials(
-            domain="test.zendesk.com",
-            email="test@example.com",
-            api_token="fake_token",
-            progress_callback=progress_callback
-        )
+        tq = TicketQLibrary.from_config(progress_callback=progress_callback)
         
-        # Operations will now report progress
-        # tickets = zd.get_tickets(status=["open", "pending", "hold"])
-        print("✅ Progress callback configured")
+        print("🔄 Operations will now show progress...")
         
+        # Operations will show progress via callback
+        tickets = tq.get_tickets(status=["open", "pending"])
+        
+        if tickets:
+            # Export will also show progress
+            tq.export_to_csv(tickets[:5], "progress_example.csv")
+            
     except Exception as e:
-        print(f"⚠️  Progress example failed: {e}")
+        print(f"❌ Error: {e}")
 
 
-def error_handling_example():
-    """Example of comprehensive error handling."""
-    print("\n=== Error Handling Example ===")
+def multi_adapter_example():
+    """Example of using multiple adapters (when available)."""
+    print("\n" + "=" * 60)
+    print("MULTI-ADAPTER EXAMPLE")
+    print("=" * 60)
     
-    from zendesk_cli import (
-        AuthenticationError,
-        APIError,
-        NetworkError,
-        ConfigurationError
-    )
+    # This example shows how you would work with multiple adapters
+    # when additional adapter packages are installed
+    
+    adapters_to_try = ["zendesk", "jira", "servicenow"]
+    all_tickets: List[LibraryTicket] = []
+    
+    for adapter_name in adapters_to_try:
+        try:
+            print(f"🔌 Trying {adapter_name} adapter...")
+            tq = TicketQLibrary.from_config(adapter_name=adapter_name)
+            
+            adapter_info = tq.get_adapter_info()
+            print(f"✅ Connected to {adapter_info['display_name']}")
+            
+            # Get tickets from this adapter
+            tickets = tq.get_tickets(status="open")
+            print(f"   Found {len(tickets)} open tickets")
+            
+            # Add to combined list
+            all_tickets.extend(tickets)
+            
+        except (ConfigurationError, PluginError):
+            print(f"⏭️  {adapter_name} adapter not configured or not installed")
+        except Exception as e:
+            print(f"❌ Error with {adapter_name}: {e}")
+    
+    if all_tickets:
+        print(f"\n📊 Total tickets across all systems: {len(all_tickets)}")
+        
+        # Group by adapter
+        by_adapter = {}
+        for ticket in all_tickets:
+            adapter = ticket.adapter_name
+            if adapter not in by_adapter:
+                by_adapter[adapter] = []
+            by_adapter[adapter].append(ticket)
+        
+        for adapter, tickets in by_adapter.items():
+            print(f"   {adapter}: {len(tickets)} tickets")
+            
+        # Export combined results
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        combined_export = f"all_systems_tickets_{timestamp}.csv"
+        
+        # Use any adapter for export (they all have the same export method)
+        if all_tickets:
+            tq = TicketQLibrary.from_config()
+            tq.export_to_csv(all_tickets, combined_export)
+            print(f"✅ Combined export saved to: {combined_export}")
+    else:
+        print("ℹ️  No tickets found across any configured adapters")
+
+
+def main():
+    """Run all examples."""
+    print("🎫 TicketQ Library Usage Examples")
+    print("=================================")
+    print("This script demonstrates various ways to use TicketQ as a Python library.")
+    print("Make sure you have configured at least one adapter before running!")
+    print()
     
     try:
-        # This will fail with fake credentials
-        zd = ZendeskLibrary.from_credentials(
-            domain="fake.zendesk.com",
-            email="fake@example.com",
-            api_token="fake_token"
-        )
+        # Run all examples
+        basic_usage()
+        advanced_filtering()
+        search_functionality()
+        csv_export_examples()
+        progress_callback_example()
+        multi_adapter_example()
+        error_handling_examples()
         
-        tickets = zd.get_tickets()
-        
-    except AuthenticationError as e:
-        print(f"🔑 Authentication failed: {e}")
-        print("   → Check your email and API token")
-        
-    except NetworkError as e:
-        print(f"🌐 Network error: {e}")
-        print("   → Check your internet connection and domain")
-        
-    except APIError as e:
-        print(f"🔧 API error: {e}")
-        print("   → Check Zendesk service status")
-        
-    except ConfigurationError as e:
-        print(f"⚙️  Configuration error: {e}")
-        print("   → Run configuration setup")
+        print("\n" + "=" * 60)
+        print("✅ ALL EXAMPLES COMPLETED")
+        print("=" * 60)
+        print("💡 Next steps:")
+        print("   • Modify these examples for your specific use case")
+        print("   • Integrate TicketQ into your automation scripts")
+        print("   • Build web applications using the library API")
+        print("   • Check the README.md for more documentation")
         
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-        print("   → Contact support")
+        print(f"\n❌ Example execution failed: {e}")
+        print("💡 Make sure you have:")
+        print("   1. Installed TicketQ: pip install 'ticketq[cli]'")
+        print("   2. Installed an adapter: pip install ticketq-zendesk")
+        print("   3. Configured the adapter: tq configure --adapter zendesk")
 
 
 if __name__ == "__main__":
-    print("🎯 Zendesk CLI Library Usage Examples\n")
-    
-    # Note: These examples use fake credentials and will show expected errors
-    basic_usage_example()
-    flask_integration_example()
-    automated_reporting_example()
-    progress_callback_example()
-    error_handling_example()
-    
-    print("\n✨ Examples complete!")
-    print("\nTo use with real data:")
-    print("1. Configure your credentials: zendesk configure")
-    print("2. Replace fake credentials in examples with real ones")
-    print("3. Run the examples with your Zendesk instance")
+    main()
